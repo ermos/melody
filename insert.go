@@ -65,7 +65,7 @@ func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
 		params = append(params, v.Value)
 	}
 
-	result = append(result, strings.Join(strings.Repeat("?", len(i.ctx.Value)), ", "))
+	result = append(result, strings.Join(strings.Split(strings.Repeat("?", len(i.ctx.Value)), ""), ", "))
 
 	if i.ctx.withDuplicateKey {
 		var resultOnUpdate []string
