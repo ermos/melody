@@ -52,7 +52,14 @@ func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
 		return res, params, errors.New("one table need to be defined")
 	}
 
-	result = append(result, fmt.Sprintf("INSERT INTO %s SET", i.ctx.Table))
+	result = append(result, fmt.Sprintf("INSERT INTO %s", i.ctx.Table))
+
+	var columns []string
+	for _, v := range i.ctx.Value {
+		columns = append(columns, v.Column)
+	}
+
+	result = append(result, fmt.Sprintf("(%s)", strings.Join(columns, ", ")))
 
 	var resultValue []string
 	for _, v := range i.ctx.Value {
