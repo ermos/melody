@@ -56,7 +56,7 @@ func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
 
 	var columns []string
 	for _, v := range i.ctx.Value {
-		columns = append(columns, fmt.Sprintf("`%s`", v.Column))
+		columns = append(columns, v.Column)
 	}
 
 	result = append(result, fmt.Sprintf("(%s)", strings.Join(columns, ", ")))
