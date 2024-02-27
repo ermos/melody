@@ -56,18 +56,16 @@ func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
 
 	var columns []string
 	for _, v := range i.ctx.Value {
-		columns = append(columns, v.Column)
+		columns = append(columns, fmt.Sprintf("`%s`", v.Column))
 	}
 
 	result = append(result, fmt.Sprintf("(%s)", strings.Join(columns, ", ")))
 
-	var resultValue []string
 	for _, v := range i.ctx.Value {
-		resultValue = append(resultValue, fmt.Sprintf("%s = ?", v.Column))
 		params = append(params, v.Value)
 	}
 
-	result = append(result, strings.Join(resultValue, ", "))
+	result = append(result, strings.Join(strings.Repeat("?", len(i.ctx.Value)), ", "))
 
 	if i.ctx.withDuplicateKey {
 		var resultOnUpdate []string
