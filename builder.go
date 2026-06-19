@@ -36,7 +36,7 @@ type WhereContext struct {
 type where struct {
 	Key      string
 	Operator string
-	Values   []interface{}
+	Values   []any
 	IsOn     bool
 	IsOr     bool
 }
@@ -104,17 +104,17 @@ func (b *Builder) Offset(offset int) *Builder {
 	return b
 }
 
-func (b *Builder) Get() (query string, params []interface{}, err error) {
+func (b *Builder) Get() (query string, params []any, err error) {
 	query, params, err = b.build(true)
 	return b.rebind(b.withFields(b.withLimitOffset(query))), params, err
 }
 
-func (b *Builder) GetCount() (query string, params []interface{}, err error) {
+func (b *Builder) GetCount() (query string, params []any, err error) {
 	query, params, err = b.build(false)
 	return b.rebind(b.withCount(query, "")), params, err
 }
 
-func (b *Builder) GetCountWithKey(key string) (query string, params []interface{}, err error) {
+func (b *Builder) GetCountWithKey(key string) (query string, params []any, err error) {
 	query, params, err = b.build(false)
 	return b.rebind(b.withCount(query, key)), params, err
 }
@@ -127,7 +127,7 @@ func (b *Builder) GetLimit() int {
 	return b.ctx.Limit
 }
 
-func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, params []interface{}, err error) {
+func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, params []any, err error) {
 	valuesLen := len(wc.Values)
 
 	if isFirst && !isJoin && valuesLen != 0 {
@@ -177,7 +177,7 @@ func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, 
 
 	for i, s := range wc.Sub {
 		var r []string
-		var p []interface{}
+		var p []any
 
 		r, p, err = buildWhere(s, isFirst && i == 0 && len(wc.Values) == 0, isJoin, true)
 		if err != nil {
@@ -230,7 +230,7 @@ func (b *Builder) withLimitOffset(query string) string {
 	return query
 }
 
-func (b *Builder) build(withOrderBy bool) (res string, params []interface{}, err error) {
+func (b *Builder) build(withOrderBy bool) (res string, params []any, err error) {
 	var result []string
 
 	if len(b.ctx.Table) == 0 {
@@ -251,7 +251,7 @@ func (b *Builder) build(withOrderBy bool) (res string, params []interface{}, err
 
 	for _, j := range b.ctx.Join {
 		var r []string
-		var p []interface{}
+		var p []any
 
 		result = append(result, fmt.Sprintf("%s %s ON", j.Type, j.Table))
 
@@ -266,7 +266,7 @@ func (b *Builder) build(withOrderBy bool) (res string, params []interface{}, err
 
 	for i, wc := range b.ctx.Where {
 		var r []string
-		var p []interface{}
+		var p []any
 
 		r, p, err = buildWhere(wc, i == 0, false, false)
 		if err != nil {

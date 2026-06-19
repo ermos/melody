@@ -37,11 +37,11 @@ func (d *DeleteBuilder) Returning(columns ...string) *DeleteBuilder {
 	return d
 }
 
-func (d *DeleteBuilder) Where(key string, operator string, values ...interface{}) *DeleteBuilder {
+func (d *DeleteBuilder) Where(key string, operator string, values ...any) *DeleteBuilder {
 	return d.where(key, operator, values, false, false)
 }
 
-func (d *DeleteBuilder) OrWhere(key string, operator string, values ...interface{}) *DeleteBuilder {
+func (d *DeleteBuilder) OrWhere(key string, operator string, values ...any) *DeleteBuilder {
 	return d.where(key, operator, values, true, false)
 }
 
@@ -60,7 +60,7 @@ func (d *DeleteBuilder) sub(sub SubBuilderFunc, isOr bool) *DeleteBuilder {
 	return d
 }
 
-func (d *DeleteBuilder) where(key, operator string, values []interface{}, isOr, isOn bool) *DeleteBuilder {
+func (d *DeleteBuilder) where(key, operator string, values []any, isOr, isOn bool) *DeleteBuilder {
 	d.ctx.Where = append(d.ctx.Where, WhereContext{
 		Values: []where{
 			{
@@ -75,7 +75,7 @@ func (d *DeleteBuilder) where(key, operator string, values []interface{}, isOr, 
 	return d
 }
 
-func (d *DeleteBuilder) Get() (query string, params []interface{}, err error) {
+func (d *DeleteBuilder) Get() (query string, params []any, err error) {
 	query, params, err = d.build()
 	if err != nil {
 		return query, params, err
@@ -86,7 +86,7 @@ func (d *DeleteBuilder) Get() (query string, params []interface{}, err error) {
 	return query, params, err
 }
 
-func (d *DeleteBuilder) build() (res string, params []interface{}, err error) {
+func (d *DeleteBuilder) build() (res string, params []any, err error) {
 	if d.ctx.Table == "" {
 		return res, params, errors.New("one table need to be defined")
 	}
@@ -95,7 +95,7 @@ func (d *DeleteBuilder) build() (res string, params []interface{}, err error) {
 
 	for i, wc := range d.ctx.Where {
 		var r []string
-		var p []interface{}
+		var p []any
 
 		r, p, err = buildWhere(wc, i == 0, false, false)
 		if err != nil {

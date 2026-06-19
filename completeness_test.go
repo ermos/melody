@@ -7,7 +7,7 @@ import (
 
 func TestDelete(t *testing.T) {
 	q, p, err := NewDelete("users").Where("id", "=", 1).Get()
-	eq(t, "delete", q, p, err, "DELETE FROM users WHERE id = ?", []interface{}{1})
+	eq(t, "delete", q, p, err, "DELETE FROM users WHERE id = ?", []any{1})
 }
 
 func TestDeleteNoTable(t *testing.T) {
@@ -21,7 +21,7 @@ func TestDeletePostgresReturning(t *testing.T) {
 	q, p, err := NewDelete("users").Dialect(Postgres).
 		Where("id", "=", 1).Returning("id").Get()
 	eq(t, "delete returning", q, p, err,
-		"DELETE FROM users WHERE id = $1 RETURNING id", []interface{}{1})
+		"DELETE FROM users WHERE id = $1 RETURNING id", []any{1})
 }
 
 func TestInsertReturning(t *testing.T) {
@@ -29,7 +29,7 @@ func TestInsertReturning(t *testing.T) {
 		Set("name", "bob").Returning("id", "created_at").Get()
 	eq(t, "insert returning", q, p, err,
 		"INSERT INTO users (name) VALUES( $1 ) RETURNING id, created_at",
-		[]interface{}{"bob"})
+		[]any{"bob"})
 }
 
 func TestUpdateReturning(t *testing.T) {
@@ -37,7 +37,7 @@ func TestUpdateReturning(t *testing.T) {
 		Set("name", "bob").Where("id", "=", 1).Returning("updated_at").Get()
 	eq(t, "update returning", q, p, err,
 		"UPDATE users SET name = ? WHERE id = ? RETURNING updated_at",
-		[]interface{}{"bob", 1})
+		[]any{"bob", 1})
 }
 
 func TestParseStructWithTimeAndNested(t *testing.T) {
@@ -56,8 +56,8 @@ func TestParseStructWithTimeAndNested(t *testing.T) {
 
 	want := map[string]string{
 		"id":           "id",
-		"created_at":   "created_at",   // time.Time mapped, not recursed
-		"address.city": "city",          // nested struct prefixed
+		"created_at":   "created_at", // time.Time mapped, not recursed
+		"address.city": "city",       // nested struct prefixed
 	}
 	for k, v := range want {
 		if got := b.ctx.JsonToDB[k]; got != v {
