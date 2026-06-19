@@ -7,7 +7,8 @@ import (
 )
 
 type InsertBuilder struct {
-	ctx insertContext
+	ctx     insertContext
+	dialect Dialect
 }
 
 type insertContext struct {
@@ -24,10 +25,16 @@ type insertValue struct {
 
 func NewInsert(table string) *InsertBuilder {
 	return &InsertBuilder{
-		insertContext{
+		ctx: insertContext{
 			Table: table,
 		},
 	}
+}
+
+// Dialect sets the SQL dialect used to render the final query.
+func (i *InsertBuilder) Dialect(d Dialect) *InsertBuilder {
+	i.dialect = d
+	return i
 }
 
 func (i *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
@@ -42,7 +49,11 @@ func (i *InsertBuilder) UpdateDuplicateKey() *InsertBuilder {
 }
 
 func (i *InsertBuilder) Get() (query string, params []interface{}, err error) {
-	return i.build()
+	query, params, err = i.build()
+	if i.dialect != nil {
+		query = i.dialect.Rebind(query)
+	}
+	return query, params, err
 }
 
 func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
