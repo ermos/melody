@@ -11,21 +11,21 @@ func TestPostgresSelectPlaceholders(t *testing.T) {
 		Get()
 	eq(t, "pg select", q, p, err,
 		"SELECT * FROM users WHERE id = $1 AND name = $2 AND status IN ($3,$4)",
-		[]interface{}{1, "bob", "a", "b"})
+		[]any{1, "bob", "a", "b"})
 }
 
 func TestPostgresInsert(t *testing.T) {
 	q, p, err := NewInsert("users").Dialect(Postgres).
 		Set("name", "bob").Set("age", 30).Get()
 	eq(t, "pg insert", q, p, err,
-		"INSERT INTO users (name, age) VALUES( $1, $2 )", []interface{}{"bob", 30})
+		"INSERT INTO users (name, age) VALUES( $1, $2 )", []any{"bob", 30})
 }
 
 func TestPostgresUpdate(t *testing.T) {
 	q, p, err := NewUpdate("users").Dialect(Postgres).
 		Set("name", "bob").Where("id", "=", 1).Get()
 	eq(t, "pg update", q, p, err,
-		"UPDATE users SET name = $1 WHERE id = $2", []interface{}{"bob", 1})
+		"UPDATE users SET name = $1 WHERE id = $2", []any{"bob", 1})
 }
 
 func TestDefaultDialectUnchanged(t *testing.T) {

@@ -18,20 +18,20 @@ func (b *Builder) OrGroupOn(sub SubBuilderFunc) *Builder {
 	return b.sub(sub, true)
 }
 
-func (b *Builder) Where(key string, operator string, values ...interface{}) *Builder {
+func (b *Builder) Where(key string, operator string, values ...any) *Builder {
 	return b.where(key, operator, values, false, false)
 }
 
-func (b *Builder) OrWhere(key string, operator string, values ...interface{}) *Builder {
+func (b *Builder) OrWhere(key string, operator string, values ...any) *Builder {
 	return b.where(key, operator, values, true, false)
 }
 
 func (b *Builder) On(firstKey string, operator string, secondKey string) *Builder {
-	return b.where(firstKey, operator, []interface{}{secondKey}, false, true)
+	return b.where(firstKey, operator, []any{secondKey}, false, true)
 }
 
 func (b *Builder) OrOn(firstKey string, operator string, secondKey string) *Builder {
-	return b.where(firstKey, operator, []interface{}{secondKey}, true, true)
+	return b.where(firstKey, operator, []any{secondKey}, true, true)
 }
 
 func (b *Builder) sub(sub SubBuilderFunc, isOr bool) *Builder {
@@ -46,7 +46,7 @@ func (b *Builder) sub(sub SubBuilderFunc, isOr bool) *Builder {
 	return b
 }
 
-func (b *Builder) where(key, operator string, values []interface{}, isOr, isOn bool) *Builder {
+func (b *Builder) where(key, operator string, values []any, isOr, isOn bool) *Builder {
 	b.ctx.Where = append(b.ctx.Where, WhereContext{
 		Values: []where{
 			{

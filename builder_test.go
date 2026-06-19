@@ -9,7 +9,7 @@ import (
 // (including known quirks) so later refactors are provably behaviour-preserving.
 // Where a case documents a known bug, the comment says so.
 
-func eq(t *testing.T, name, gotQuery string, gotParams []interface{}, gotErr error, wantQuery string, wantParams []interface{}) {
+func eq(t *testing.T, name, gotQuery string, gotParams []any, gotErr error, wantQuery string, wantParams []any) {
 	t.Helper()
 	if gotErr != nil {
 		t.Fatalf("%s: unexpected error: %v", name, gotErr)
@@ -42,22 +42,22 @@ func TestSelectDistinct(t *testing.T) {
 
 func TestWhereSingle(t *testing.T) {
 	q, p, err := New("users").Where("id", "=", 1).Get()
-	eq(t, "where single", q, p, err, "SELECT * FROM users WHERE id = ?", []interface{}{1})
+	eq(t, "where single", q, p, err, "SELECT * FROM users WHERE id = ?", []any{1})
 }
 
 func TestWhereAnd(t *testing.T) {
 	q, p, err := New("users").Where("id", "=", 1).Where("name", "=", "bob").Get()
-	eq(t, "where and", q, p, err, "SELECT * FROM users WHERE id = ? AND name = ?", []interface{}{1, "bob"})
+	eq(t, "where and", q, p, err, "SELECT * FROM users WHERE id = ? AND name = ?", []any{1, "bob"})
 }
 
 func TestWhereOr(t *testing.T) {
 	q, p, err := New("users").Where("id", "=", 1).OrWhere("id", "=", 2).Get()
-	eq(t, "where or", q, p, err, "SELECT * FROM users WHERE id = ? OR id = ?", []interface{}{1, 2})
+	eq(t, "where or", q, p, err, "SELECT * FROM users WHERE id = ? OR id = ?", []any{1, 2})
 }
 
 func TestWhereIn(t *testing.T) {
 	q, p, err := New("users").Where("id", "IN", 1, 2, 3).Get()
-	eq(t, "where in", q, p, err, "SELECT * FROM users WHERE id IN (?,?,?)", []interface{}{1, 2, 3})
+	eq(t, "where in", q, p, err, "SELECT * FROM users WHERE id IN (?,?,?)", []any{1, 2, 3})
 }
 
 func TestGroupWhere(t *testing.T) {
@@ -68,7 +68,7 @@ func TestGroupWhere(t *testing.T) {
 		}).Get()
 	eq(t, "group where", q, p, err,
 		"SELECT * FROM users WHERE active = ? AND ( age > ? OR vip = ? )",
-		[]interface{}{true, 18, true})
+		[]any{true, 18, true})
 }
 
 func TestOrderByGroupByLimitOffset(t *testing.T) {
@@ -81,7 +81,7 @@ func TestOrderByGroupByLimitOffset(t *testing.T) {
 		Get()
 	eq(t, "full", q, p, err,
 		"SELECT * FROM users WHERE active = ? GROUP BY country ORDER BY name ASC LIMIT 10 OFFSET 20",
-		[]interface{}{true})
+		[]any{true})
 }
 
 func TestJoin(t *testing.T) {
@@ -95,7 +95,7 @@ func TestJoin(t *testing.T) {
 
 func TestCount(t *testing.T) {
 	q, p, err := New("users").Where("active", "=", true).GetCount()
-	eq(t, "count", q, p, err, "SELECT count(*) FROM users WHERE active = ?", []interface{}{true})
+	eq(t, "count", q, p, err, "SELECT count(*) FROM users WHERE active = ?", []any{true})
 }
 
 func TestCountWithKey(t *testing.T) {
@@ -113,7 +113,7 @@ func TestNoTableErrors(t *testing.T) {
 func TestInsert(t *testing.T) {
 	q, p, err := NewInsert("users").Set("name", "bob").Set("age", 30).Get()
 	eq(t, "insert", q, p, err,
-		"INSERT INTO users (name, age) VALUES( ?, ? )", []interface{}{"bob", 30})
+		"INSERT INTO users (name, age) VALUES( ?, ? )", []any{"bob", 30})
 }
 
 func TestOrGroupWhere(t *testing.T) {
@@ -125,7 +125,7 @@ func TestOrGroupWhere(t *testing.T) {
 		}).Get()
 	eq(t, "or group", q, p, err,
 		"SELECT * FROM users WHERE a = ? OR ( b = ? AND c = ? )",
-		[]interface{}{1, 2, 3})
+		[]any{1, 2, 3})
 }
 
 func TestCountIgnoresOrderBy(t *testing.T) {
@@ -155,5 +155,5 @@ func TestPlaceholders(t *testing.T) {
 func TestUpdate(t *testing.T) {
 	q, p, err := NewUpdate("users").Set("name", "bob").Where("id", "=", 1).Get()
 	eq(t, "update", q, p, err,
-		"UPDATE users SET name = ? WHERE id = ?", []interface{}{"bob", 1})
+		"UPDATE users SET name = ? WHERE id = ?", []any{"bob", 1})
 }

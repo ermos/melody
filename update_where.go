@@ -18,20 +18,20 @@ func (u *UpdateBuilder) OrGroupOn(sub SubBuilderFunc) *UpdateBuilder {
 	return u.sub(sub, true)
 }
 
-func (u *UpdateBuilder) Where(key string, operator string, values ...interface{}) *UpdateBuilder {
+func (u *UpdateBuilder) Where(key string, operator string, values ...any) *UpdateBuilder {
 	return u.where(key, operator, values, false, false)
 }
 
-func (u *UpdateBuilder) OrWhere(key string, operator string, values ...interface{}) *UpdateBuilder {
+func (u *UpdateBuilder) OrWhere(key string, operator string, values ...any) *UpdateBuilder {
 	return u.where(key, operator, values, true, false)
 }
 
 func (u *UpdateBuilder) On(firstKey string, operator string, secondKey string) *UpdateBuilder {
-	return u.where(firstKey, operator, []interface{}{secondKey}, false, true)
+	return u.where(firstKey, operator, []any{secondKey}, false, true)
 }
 
 func (u *UpdateBuilder) OrOn(firstKey string, operator string, secondKey string) *UpdateBuilder {
-	return u.where(firstKey, operator, []interface{}{secondKey}, true, true)
+	return u.where(firstKey, operator, []any{secondKey}, true, true)
 }
 
 func (u *UpdateBuilder) sub(sub SubBuilderFunc, isOr bool) *UpdateBuilder {
@@ -46,7 +46,7 @@ func (u *UpdateBuilder) sub(sub SubBuilderFunc, isOr bool) *UpdateBuilder {
 	return u
 }
 
-func (u *UpdateBuilder) where(key, operator string, values []interface{}, isOr, isOn bool) *UpdateBuilder {
+func (u *UpdateBuilder) where(key, operator string, values []any, isOr, isOn bool) *UpdateBuilder {
 	u.ctx.Where = append(u.ctx.Where, WhereContext{
 		Values: []where{
 			{
