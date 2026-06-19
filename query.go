@@ -1,13 +1,14 @@
 package melody
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
 )
 
-func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) *Builder {
+func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) (*Builder, error) {
 	var page, perPage int
 	var err error
 
@@ -18,19 +19,16 @@ func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) *Buil
 		case "page":
 			page, err = strconv.Atoi(value)
 			if err != nil {
-				panic(err)
+				return b, fmt.Errorf("invalid page %q: %w", value, err)
 			}
-			break
 		case "per_page":
 			perPage, err = strconv.Atoi(value)
 			if err != nil {
-				panic(err)
+				return b, fmt.Errorf("invalid per_page %q: %w", value, err)
 			}
-			break
 		default:
-			err = b.parseQueryParam(key, value)
-			if err != nil {
-				panic(err)
+			if err = b.parseQueryParam(key, value); err != nil {
+				return b, err
 			}
 		}
 	}
@@ -42,7 +40,7 @@ func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) *Buil
 		}
 	}
 
-	return b
+	return b, nil
 }
 
 func (b *Builder) parseQueryParam(key string, value string) error {
@@ -58,24 +56,20 @@ func (b *Builder) parseQueryParam(key string, value string) error {
 		cond = indexes[0][2]
 	}
 
-	field := b.ctx.JsonToDB[json]
-	//if field == "" {
-	//
-	//}
+	field, ok := b.ctx.JsonToDB[json]
+	if !ok {
+		return fmt.Errorf("unknown query param %q", json)
+	}
 
 	switch strings.ToLower(cond) {
 	case "equal": // =23
 		b.Where(field, "=", value)
-		break
 	case "not-equal": // [not-equal]=23
 		b.Where(field, "!=", value)
-		break
 	case "like": // [like]=23
 		b.Where(field, "LIKE", "%"+value+"%")
-		break
 	case "not-like": // [not-like]=23
 		b.Where(field, "NOT LIKE", "%"+value+"%")
-		break
 	case "in", "not-in": // [in]=1,2 or [not-in]=1,2
 		array := strings.Split(value, ",")
 
@@ -90,7 +84,8 @@ func (b *Builder) parseQueryParam(key string, value string) error {
 		}
 
 		b.Where(field, operator, s...)
-		break
+	default:
+		return fmt.Errorf("unknown condition %q", cond)
 	}
 
 	return nil

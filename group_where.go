@@ -11,11 +11,11 @@ func (b *WhereContext) GroupOn(sub SubBuilderFunc) *WhereContext {
 }
 
 func (b *WhereContext) OrGroupWhere(sub SubBuilderFunc) *WhereContext {
-	return b.sub(sub, false)
+	return b.sub(sub, true)
 }
 
 func (b *WhereContext) OrGroupOn(sub SubBuilderFunc) *WhereContext {
-	return b.sub(sub, false)
+	return b.sub(sub, true)
 }
 
 func (b *WhereContext) Where(key string, operator string, values ...interface{}) *WhereContext {
