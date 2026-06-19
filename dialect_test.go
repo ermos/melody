@@ -64,3 +64,22 @@ func TestDefaultUpsertUnchanged(t *testing.T) {
 		"INSERT INTO users (id, name) VALUES( ?, ? ) ON DUPLICATE KEY UPDATE name = ?",
 		[]any{1, "bob", "bob"})
 }
+
+func TestSQLiteUpsert(t *testing.T) {
+	// SQLite: "?" placeholders + ON CONFLICT (like Postgres, unlike MySQL)
+	q, p, err := NewInsert("users").Dialect(SQLite).
+		Set("id", 1).
+		Set("name", "bob").UpdateDuplicateKey().
+		OnConflict("id").
+		Get()
+	eq(t, "sqlite upsert", q, p, err,
+		"INSERT INTO users (id, name) VALUES( ?, ? ) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
+		[]any{1, "bob"})
+}
+
+func TestSQLiteSelectKeepsQuestionMarks(t *testing.T) {
+	q, _, _ := New("users").Dialect(SQLite).Where("id", "=", 1).Get()
+	if q != "SELECT * FROM users WHERE id = ?" {
+		t.Errorf("sqlite should keep ? placeholders, got %q", q)
+	}
+}

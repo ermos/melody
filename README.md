@@ -29,10 +29,11 @@ Every value is bound as a parameter — melody never interpolates values into th
 
 The builder emits `?` placeholders internally; the dialect rewrites them on render.
 
-| Dialect            | Placeholders | Notes                              |
-|--------------------|--------------|------------------------------------|
-| `melody.Default`   | `?`          | MySQL / SQLite. Used when unset.   |
-| `melody.Postgres`  | `$1, $2, …`  | Set via `.Dialect(melody.Postgres)`|
+| Dialect           | Placeholders | Upsert                            |
+|-------------------|--------------|-----------------------------------|
+| `melody.Default`  | `?`          | `ON DUPLICATE KEY UPDATE` (MySQL) |
+| `melody.Postgres` | `$1, $2, …`  | `ON CONFLICT … DO UPDATE`         |
+| `melody.SQLite`   | `?`          | `ON CONFLICT … DO UPDATE`         |
 
 Implement `melody.Dialect` to add your own.
 

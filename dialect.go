@@ -31,6 +31,10 @@ var Default Dialect = defaultDialect{}
 // Postgres uses positional "$1, $2, ..." placeholders.
 var Postgres Dialect = postgresDialect{}
 
+// SQLite keeps "?" placeholders but uses the Postgres-style
+// ON CONFLICT ... DO UPDATE SET upsert (not MySQL's ON DUPLICATE KEY).
+var SQLite Dialect = sqliteDialect{}
+
 type defaultDialect struct{}
 
 func (defaultDialect) Rebind(query string) string { return query }
@@ -62,6 +66,20 @@ func (postgresDialect) Rebind(query string) string {
 }
 
 func (postgresDialect) UpsertClause(conflict, update []string) (string, bool) {
+	return onConflictClause(conflict, update)
+}
+
+type sqliteDialect struct{}
+
+func (sqliteDialect) Rebind(query string) string { return query }
+
+func (sqliteDialect) UpsertClause(conflict, update []string) (string, bool) {
+	return onConflictClause(conflict, update)
+}
+
+// onConflictClause renders the Postgres/SQLite upsert clause. It needs no extra
+// params (values come from EXCLUDED).
+func onConflictClause(conflict, update []string) (string, bool) {
 	sets := make([]string, len(update))
 	for i, c := range update {
 		sets[i] = c + " = EXCLUDED." + c
