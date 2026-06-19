@@ -15,6 +15,7 @@ type insertContext struct {
 	Table            string
 	Value            []insertValue
 	withDuplicateKey bool
+	Returning        []string
 }
 
 type insertValue struct {
@@ -37,8 +38,16 @@ func (i *InsertBuilder) Dialect(d Dialect) *InsertBuilder {
 	return i
 }
 
+// ponytail: single-row insert only. Multi-row VALUES (...),(...) needs an
+// AddRow-style API redesign of InsertBuilder; add when batch inserts are needed.
 func (i *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
 	i.ctx.Value = append(i.ctx.Value, insertValue{Column: column, Value: value})
+	return i
+}
+
+// Returning adds a RETURNING clause (Postgres / SQLite syntax).
+func (i *InsertBuilder) Returning(columns ...string) *InsertBuilder {
+	i.ctx.Returning = append(i.ctx.Returning, columns...)
 	return i
 }
 
@@ -91,6 +100,10 @@ func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
 
 		result = append(result, "ON DUPLICATE KEY UPDATE")
 		result = append(result, strings.Join(resultOnUpdate, ", "))
+	}
+
+	if len(i.ctx.Returning) != 0 {
+		result = append(result, "RETURNING "+strings.Join(i.ctx.Returning, ", "))
 	}
 
 	return strings.Join(result, " "), params, nil

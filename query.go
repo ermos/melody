@@ -6,7 +6,10 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
+
+var timeType = reflect.TypeOf(time.Time{})
 
 func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) (*Builder, error) {
 	var page, perPage int
@@ -103,17 +106,43 @@ func parseStruct(st interface{}, data map[string]string, sub string) {
 	t := reflect.TypeOf(st)
 	val := reflect.ValueOf(st)
 
+	for t != nil && t.Kind() == reflect.Ptr {
+		if val.IsNil() {
+			return
+		}
+		t = t.Elem()
+		val = val.Elem()
+	}
+	if t == nil || t.Kind() != reflect.Struct {
+		return
+	}
+
 	for i := 0; i < t.NumField(); i++ {
 		s := t.Field(i)
+		if s.PkgPath != "" { // unexported field
+			continue
+		}
+
 		json := strings.ReplaceAll(s.Tag.Get("json"), ",omitempty", "")
 		sql := s.Tag.Get("db")
 
-		if s.Type.Kind().String() == "struct" {
-			parseStruct(val.Field(i).Interface(), data, sub+json+".")
-		}
-
+		// A field carrying a db tag is a column, even when its Go type is a
+		// struct (e.g. time.Time): map it and do not recurse into it.
 		if json != "-" && json != "" && sql != "" {
 			data[sub+json] = sql
+			continue
+		}
+
+		ft := s.Type
+		for ft.Kind() == reflect.Ptr {
+			ft = ft.Elem()
+		}
+		if ft.Kind() == reflect.Struct && ft != timeType {
+			prefix := sub
+			if json != "" && json != "-" {
+				prefix = sub + json + "."
+			}
+			parseStruct(val.Field(i).Interface(), data, prefix)
 		}
 	}
 }
