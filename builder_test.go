@@ -116,6 +116,42 @@ func TestInsert(t *testing.T) {
 		"INSERT INTO users (name, age) VALUES( ?, ? )", []interface{}{"bob", 30})
 }
 
+func TestOrGroupWhere(t *testing.T) {
+	// regression: OrGroupWhere must emit OR before the group, not AND.
+	q, p, err := New("users").
+		Where("a", "=", 1).
+		OrGroupWhere(func(w *WhereContext) {
+			w.Where("b", "=", 2).Where("c", "=", 3)
+		}).Get()
+	eq(t, "or group", q, p, err,
+		"SELECT * FROM users WHERE a = ? OR ( b = ? AND c = ? )",
+		[]interface{}{1, 2, 3})
+}
+
+func TestCountIgnoresOrderBy(t *testing.T) {
+	// regression: count query must not carry an ORDER BY clause.
+	q, p, err := New("users").OrderBy("name", Asc).GetCount()
+	eq(t, "count no order", q, p, err, "SELECT count(*) FROM users", nil)
+}
+
+func TestPlaceholders(t *testing.T) {
+	cases := []struct {
+		n   int
+		sep string
+		out string
+	}{
+		{0, ",", ""},
+		{1, ",", "?"},
+		{3, ",", "?,?,?"},
+		{2, ", ", "?, ?"},
+	}
+	for _, c := range cases {
+		if got := placeholders(c.n, c.sep); got != c.out {
+			t.Errorf("placeholders(%d,%q) = %q, want %q", c.n, c.sep, got, c.out)
+		}
+	}
+}
+
 func TestUpdate(t *testing.T) {
 	q, p, err := NewUpdate("users").Set("name", "bob").Where("id", "=", 1).Get()
 	eq(t, "update", q, p, err,

@@ -11,11 +11,11 @@ func (u *UpdateBuilder) GroupOn(sub SubBuilderFunc) *UpdateBuilder {
 }
 
 func (u *UpdateBuilder) OrGroupWhere(sub SubBuilderFunc) *UpdateBuilder {
-	return u.sub(sub, false)
+	return u.sub(sub, true)
 }
 
 func (u *UpdateBuilder) OrGroupOn(sub SubBuilderFunc) *UpdateBuilder {
-	return u.sub(sub, false)
+	return u.sub(sub, true)
 }
 
 func (u *UpdateBuilder) Where(key string, operator string, values ...interface{}) *UpdateBuilder {
