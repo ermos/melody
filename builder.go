@@ -9,7 +9,8 @@ import (
 type SubBuilderFunc func(w *WhereContext)
 
 type Builder struct {
-	ctx builderContext
+	ctx     builderContext
+	dialect Dialect
 }
 
 type builderContext struct {
@@ -49,6 +50,20 @@ func New(tables ...string) *Builder {
 	b := Builder{}
 	b.ctx.Table = append(b.ctx.Table, tables...)
 	return &b
+}
+
+// Dialect sets the SQL dialect used to render the final query. Defaults to
+// melody.Default ("?" placeholders) when unset.
+func (b *Builder) Dialect(d Dialect) *Builder {
+	b.dialect = d
+	return b
+}
+
+func (b *Builder) rebind(query string) string {
+	if b.dialect == nil {
+		return query
+	}
+	return b.dialect.Rebind(query)
 }
 
 func (b *Builder) Select(fields ...string) *Builder {
@@ -91,17 +106,17 @@ func (b *Builder) Offset(offset int) *Builder {
 
 func (b *Builder) Get() (query string, params []interface{}, err error) {
 	query, params, err = b.build(true)
-	return b.withFields(b.withLimitOffset(query)), params, err
+	return b.rebind(b.withFields(b.withLimitOffset(query))), params, err
 }
 
 func (b *Builder) GetCount() (query string, params []interface{}, err error) {
 	query, params, err = b.build(false)
-	return b.withCount(query, ""), params, err
+	return b.rebind(b.withCount(query, "")), params, err
 }
 
 func (b *Builder) GetCountWithKey(key string) (query string, params []interface{}, err error) {
 	query, params, err = b.build(false)
-	return b.withCount(query, key), params, err
+	return b.rebind(b.withCount(query, key)), params, err
 }
 
 func (b *Builder) GetOffset() int {
