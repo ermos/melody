@@ -7,7 +7,8 @@ import (
 )
 
 type UpdateBuilder struct {
-	ctx updateContext
+	ctx     updateContext
+	dialect Dialect
 }
 
 type updateContext struct {
@@ -23,10 +24,16 @@ type updateValue struct {
 
 func NewUpdate(table string) *UpdateBuilder {
 	return &UpdateBuilder{
-		updateContext{
+		ctx: updateContext{
 			Table: table,
 		},
 	}
+}
+
+// Dialect sets the SQL dialect used to render the final query.
+func (u *UpdateBuilder) Dialect(d Dialect) *UpdateBuilder {
+	u.dialect = d
+	return u
 }
 
 func (u *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
@@ -35,7 +42,11 @@ func (u *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
 }
 
 func (u *UpdateBuilder) Get() (query string, params []interface{}, err error) {
-	return u.build()
+	query, params, err = u.build()
+	if u.dialect != nil {
+		query = u.dialect.Rebind(query)
+	}
+	return query, params, err
 }
 
 func (u *UpdateBuilder) build() (res string, params []interface{}, err error) {
