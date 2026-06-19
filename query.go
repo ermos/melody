@@ -11,7 +11,7 @@ import (
 
 var timeType = reflect.TypeOf(time.Time{})
 
-func (b *Builder) WithQueryParams(model interface{}, qp map[string]string) (*Builder, error) {
+func (b *Builder) WithQueryParams(model any, qp map[string]string) (*Builder, error) {
 	var page, perPage int
 	var err error
 
@@ -76,7 +76,7 @@ func (b *Builder) parseQueryParam(key string, value string) error {
 	case "in", "not-in": // [in]=1,2 or [not-in]=1,2
 		array := strings.Split(value, ",")
 
-		s := make([]interface{}, len(array))
+		s := make([]any, len(array))
 		for i, v := range array {
 			s[i] = v
 		}
@@ -94,7 +94,7 @@ func (b *Builder) parseQueryParam(key string, value string) error {
 	return nil
 }
 
-func (b *Builder) parseStruct(st interface{}) {
+func (b *Builder) parseStruct(st any) {
 	jsonToDb := make(map[string]string)
 
 	parseStruct(st, jsonToDb, "")
@@ -102,7 +102,7 @@ func (b *Builder) parseStruct(st interface{}) {
 	b.ctx.JsonToDB = jsonToDb
 }
 
-func parseStruct(st interface{}, data map[string]string, sub string) {
+func parseStruct(st any, data map[string]string, sub string) {
 	t := reflect.TypeOf(st)
 	val := reflect.ValueOf(st)
 

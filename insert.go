@@ -20,7 +20,7 @@ type insertContext struct {
 
 type insertValue struct {
 	Column           string
-	Value            interface{}
+	Value            any
 	withDuplicateKey bool
 }
 
@@ -40,7 +40,7 @@ func (i *InsertBuilder) Dialect(d Dialect) *InsertBuilder {
 
 // ponytail: single-row insert only. Multi-row VALUES (...),(...) needs an
 // AddRow-style API redesign of InsertBuilder; add when batch inserts are needed.
-func (i *InsertBuilder) Set(column string, value interface{}) *InsertBuilder {
+func (i *InsertBuilder) Set(column string, value any) *InsertBuilder {
 	i.ctx.Value = append(i.ctx.Value, insertValue{Column: column, Value: value})
 	return i
 }
@@ -57,7 +57,7 @@ func (i *InsertBuilder) UpdateDuplicateKey() *InsertBuilder {
 	return i
 }
 
-func (i *InsertBuilder) Get() (query string, params []interface{}, err error) {
+func (i *InsertBuilder) Get() (query string, params []any, err error) {
 	query, params, err = i.build()
 	if i.dialect != nil {
 		query = i.dialect.Rebind(query)
@@ -65,7 +65,7 @@ func (i *InsertBuilder) Get() (query string, params []interface{}, err error) {
 	return query, params, err
 }
 
-func (i *InsertBuilder) build() (res string, params []interface{}, err error) {
+func (i *InsertBuilder) build() (res string, params []any, err error) {
 	var result []string
 
 	if i.ctx.Table == "" {

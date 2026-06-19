@@ -20,7 +20,7 @@ type updateContext struct {
 
 type updateValue struct {
 	Column string
-	Value  interface{}
+	Value  any
 }
 
 func NewUpdate(table string) *UpdateBuilder {
@@ -37,7 +37,7 @@ func (u *UpdateBuilder) Dialect(d Dialect) *UpdateBuilder {
 	return u
 }
 
-func (u *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
+func (u *UpdateBuilder) Set(column string, value any) *UpdateBuilder {
 	u.ctx.Value = append(u.ctx.Value, updateValue{Column: column, Value: value})
 	return u
 }
@@ -48,7 +48,7 @@ func (u *UpdateBuilder) Returning(columns ...string) *UpdateBuilder {
 	return u
 }
 
-func (u *UpdateBuilder) Get() (query string, params []interface{}, err error) {
+func (u *UpdateBuilder) Get() (query string, params []any, err error) {
 	query, params, err = u.build()
 	if u.dialect != nil {
 		query = u.dialect.Rebind(query)
@@ -56,7 +56,7 @@ func (u *UpdateBuilder) Get() (query string, params []interface{}, err error) {
 	return query, params, err
 }
 
-func (u *UpdateBuilder) build() (res string, params []interface{}, err error) {
+func (u *UpdateBuilder) build() (res string, params []any, err error) {
 	var result []string
 
 	if u.ctx.Table == "" {
@@ -75,7 +75,7 @@ func (u *UpdateBuilder) build() (res string, params []interface{}, err error) {
 
 	for i, wc := range u.ctx.Where {
 		var r []string
-		var p []interface{}
+		var p []any
 
 		r, p, err = buildWhere(wc, i == 0, false, false)
 		if err != nil {
