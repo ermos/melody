@@ -8,19 +8,19 @@ type Meta struct {
 }
 
 type MetaField struct {
-	Name  string      `json:"name"`
-	Type  string      `json:"type"`
-	Value interface{} `json:"value,omitempty"`
+	Name  string `json:"name"`
+	Type  string `json:"type"`
+	Value any    `json:"value,omitempty"`
 }
 
 type Result struct {
-	Meta Meta        `json:"meta"`
-	Body interface{} `json:"body"`
+	Meta Meta `json:"meta"`
+	Body any  `json:"body"`
 }
 
 // NewResult wraps a body with pagination metadata. perPage and page mirror the
 // values consumed by Builder.WithQueryParams; Pages is the total page count.
-func NewResult(body interface{}, total, perPage, page int) Result {
+func NewResult(body any, total, perPage, page int) Result {
 	pages := 0
 	if perPage > 0 {
 		pages = (total + perPage - 1) / perPage // ceil(total/perPage)
