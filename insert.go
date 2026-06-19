@@ -12,11 +12,12 @@ type InsertBuilder struct {
 }
 
 type insertContext struct {
-	Table     string
-	Columns   []string
-	Rows      [][]any
-	DupKeys   []string // columns to update on ON DUPLICATE KEY UPDATE
-	Returning []string
+	Table          string
+	Columns        []string
+	Rows           [][]any
+	DupKeys        []string // columns to overwrite on conflict
+	ConflictTarget []string // unique columns the conflict is detected on (Postgres)
+	Returning      []string
 }
 
 func NewInsert(table string) *InsertBuilder {
@@ -60,15 +61,30 @@ func (i *InsertBuilder) Returning(columns ...string) *InsertBuilder {
 	return i
 }
 
-// UpdateDuplicateKey flags the most recently Set column for an
-// ON DUPLICATE KEY UPDATE clause (MySQL).
-// ponytail: dup-key uses the first row's value; combining it with multi-row
-// inserts is undefined — use VALUES(col) by hand if you need that.
+// UpdateDuplicateKey flags the most recently Set column to be overwritten on
+// conflict. The dialect decides the syntax: ON DUPLICATE KEY UPDATE (default)
+// or ON CONFLICT ... DO UPDATE (Postgres — set the target with OnConflict).
+// ponytail: uses the first row's value; combining with multi-row inserts is
+// undefined — write VALUES(col)/EXCLUDED.col by hand if you need that.
 func (i *InsertBuilder) UpdateDuplicateKey() *InsertBuilder {
 	if n := len(i.ctx.Columns); n > 0 {
 		i.ctx.DupKeys = append(i.ctx.DupKeys, i.ctx.Columns[n-1])
 	}
 	return i
+}
+
+// OnConflict sets the unique columns the conflict is detected on. Required by
+// Postgres (ON CONFLICT (cols)); ignored by the default dialect.
+func (i *InsertBuilder) OnConflict(columns ...string) *InsertBuilder {
+	i.ctx.ConflictTarget = append(i.ctx.ConflictTarget, columns...)
+	return i
+}
+
+func (i *InsertBuilder) dia() Dialect {
+	if i.dialect == nil {
+		return Default
+	}
+	return i.dialect
 }
 
 func (i *InsertBuilder) Get() (query string, params []any, err error) {
@@ -112,13 +128,13 @@ func (i *InsertBuilder) build() (res string, params []any, err error) {
 	}
 
 	if len(i.ctx.DupKeys) > 0 {
-		var ups []string
-		for _, col := range i.ctx.DupKeys {
-			ups = append(ups, fmt.Sprintf("%s = ?", col))
-			params = append(params, i.ctx.Rows[0][indexOf(i.ctx.Columns, col)])
+		clause, withParams := i.dia().UpsertClause(i.ctx.ConflictTarget, i.ctx.DupKeys)
+		result = append(result, clause)
+		if withParams {
+			for _, col := range i.ctx.DupKeys {
+				params = append(params, i.ctx.Rows[0][indexOf(i.ctx.Columns, col)])
+			}
 		}
-		result = append(result, "ON DUPLICATE KEY UPDATE")
-		result = append(result, strings.Join(ups, ", "))
 	}
 
 	if len(i.ctx.Returning) != 0 {

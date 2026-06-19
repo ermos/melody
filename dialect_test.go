@@ -42,3 +42,25 @@ func TestRebindDollar(t *testing.T) {
 		t.Errorf("Rebind = %q, want %q", got, want)
 	}
 }
+
+func TestPostgresUpsert(t *testing.T) {
+	q, p, err := NewInsert("users").Dialect(Postgres).
+		Set("id", 1).
+		Set("name", "bob").UpdateDuplicateKey().
+		OnConflict("id").
+		Get()
+	eq(t, "pg upsert", q, p, err,
+		"INSERT INTO users (id, name) VALUES( $1, $2 ) ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name",
+		[]any{1, "bob"})
+}
+
+func TestDefaultUpsertUnchanged(t *testing.T) {
+	// regression: default dialect still emits MySQL ON DUPLICATE KEY UPDATE
+	q, p, err := NewInsert("users").
+		Set("id", 1).
+		Set("name", "bob").UpdateDuplicateKey().
+		Get()
+	eq(t, "default upsert", q, p, err,
+		"INSERT INTO users (id, name) VALUES( ?, ? ) ON DUPLICATE KEY UPDATE name = ?",
+		[]any{1, "bob", "bob"})
+}
