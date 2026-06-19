@@ -87,6 +87,13 @@ melody.NewInsert("users").Dialect(melody.Postgres).
     Get()
 // INSERT INTO users (name, age) VALUES( $1, $2 ) RETURNING id
 
+melody.NewInsert("users").
+    Set("name", "bob").Set("age", 30).
+    AddRow().
+    Set("name", "alice").Set("age", 25).
+    Get()
+// INSERT INTO users (name, age) VALUES (?, ?), (?, ?)
+
 melody.NewUpdate("users").
     Set("name", "bob").
     Where("id", "=", 1).
