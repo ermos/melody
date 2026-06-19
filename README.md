@@ -29,10 +29,11 @@ Every value is bound as a parameter — melody never interpolates values into th
 
 The builder emits `?` placeholders internally; the dialect rewrites them on render.
 
-| Dialect            | Placeholders | Notes                              |
-|--------------------|--------------|------------------------------------|
-| `melody.Default`   | `?`          | MySQL / SQLite. Used when unset.   |
-| `melody.Postgres`  | `$1, $2, …`  | Set via `.Dialect(melody.Postgres)`|
+| Dialect           | Placeholders | Upsert                            |
+|-------------------|--------------|-----------------------------------|
+| `melody.Default`  | `?`          | `ON DUPLICATE KEY UPDATE` (MySQL) |
+| `melody.Postgres` | `$1, $2, …`  | `ON CONFLICT … DO UPDATE`         |
+| `melody.SQLite`   | `?`          | `ON CONFLICT … DO UPDATE`         |
 
 Implement `melody.Dialect` to add your own.
 
@@ -106,6 +107,22 @@ melody.NewDelete("users").
 // DELETE FROM users WHERE id = ?
 ```
 
+### Upsert
+
+The conflict clause is rendered by the dialect:
+
+```go
+melody.NewInsert("users").Dialect(melody.Postgres).
+    Set("id", 1).
+    Set("name", "bob").UpdateDuplicateKey().
+    OnConflict("id").
+    Get()
+// INSERT INTO users (id, name) VALUES( $1, $2 )
+//   ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
+
+// default dialect: ... ON DUPLICATE KEY UPDATE name = ?
+```
+
 ## HTTP query params → WHERE
 
 Map JSON field names (from your model's `json`/`db` tags) to columns and build a
@@ -135,9 +152,23 @@ result := melody.NewResult(users, total, perPage, page)
 // result.Meta.Pages computed as ceil(total/perPage)
 ```
 
+## Execution
+
+melody is a pure query builder — it never touches the database. Pass its output
+to your own driver:
+
+```go
+q, params, err := melody.New("users").
+    Dialect(melody.Postgres).
+    Where("id", "=", 1).
+    Get()
+
+rows, err := db.Query(q, params...) // database/sql, pgx, ... your call
+```
+
 ## Status
 
-- `database/sql`-style output: `(query string, params []interface{}, err error)` — bring your own driver.
+- Output: `(query string, params []any, err error)` — bring your own driver.
 - Identifiers passed to `Where`/`On`/`OrderBy`/`Select` are emitted as-is; treat them
   as developer-controlled (same trust level as hand-written SQL). User input belongs in
   values (bound params) or in `WithQueryParams` (mapped columns).

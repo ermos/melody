@@ -16,6 +16,12 @@ type Dialect interface {
 	// Rebind converts the builder's "?" placeholders into the dialect's
 	// native placeholder style.
 	Rebind(query string) string
+	// UpsertClause renders the "update on conflict" clause of an INSERT.
+	// conflict holds the columns forming the unique constraint (Postgres needs
+	// them; MySQL ignores them); update holds the columns to overwrite.
+	// withParams reports whether the caller must append one bound value per
+	// update column (MySQL "col = ?"); Postgres uses EXCLUDED and needs none.
+	UpsertClause(conflict, update []string) (clause string, withParams bool)
 }
 
 // Default keeps "?" placeholders (MySQL / SQLite style). It is the zero-value
@@ -25,9 +31,21 @@ var Default Dialect = defaultDialect{}
 // Postgres uses positional "$1, $2, ..." placeholders.
 var Postgres Dialect = postgresDialect{}
 
+// SQLite keeps "?" placeholders but uses the Postgres-style
+// ON CONFLICT ... DO UPDATE SET upsert (not MySQL's ON DUPLICATE KEY).
+var SQLite Dialect = sqliteDialect{}
+
 type defaultDialect struct{}
 
 func (defaultDialect) Rebind(query string) string { return query }
+
+func (defaultDialect) UpsertClause(_, update []string) (string, bool) {
+	sets := make([]string, len(update))
+	for i, c := range update {
+		sets[i] = c + " = ?"
+	}
+	return "ON DUPLICATE KEY UPDATE " + strings.Join(sets, ", "), true
+}
 
 type postgresDialect struct{}
 
@@ -45,4 +63,30 @@ func (postgresDialect) Rebind(query string) string {
 		}
 	}
 	return sb.String()
+}
+
+func (postgresDialect) UpsertClause(conflict, update []string) (string, bool) {
+	return onConflictClause(conflict, update)
+}
+
+type sqliteDialect struct{}
+
+func (sqliteDialect) Rebind(query string) string { return query }
+
+func (sqliteDialect) UpsertClause(conflict, update []string) (string, bool) {
+	return onConflictClause(conflict, update)
+}
+
+// onConflictClause renders the Postgres/SQLite upsert clause. It needs no extra
+// params (values come from EXCLUDED).
+func onConflictClause(conflict, update []string) (string, bool) {
+	sets := make([]string, len(update))
+	for i, c := range update {
+		sets[i] = c + " = EXCLUDED." + c
+	}
+	target := ""
+	if len(conflict) > 0 {
+		target = " (" + strings.Join(conflict, ", ") + ")"
+	}
+	return "ON CONFLICT" + target + " DO UPDATE SET " + strings.Join(sets, ", "), false
 }
