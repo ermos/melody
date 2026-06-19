@@ -12,9 +12,10 @@ type UpdateBuilder struct {
 }
 
 type updateContext struct {
-	Table string
-	Value []updateValue
-	Where []WhereContext
+	Table     string
+	Value     []updateValue
+	Where     []WhereContext
+	Returning []string
 }
 
 type updateValue struct {
@@ -38,6 +39,12 @@ func (u *UpdateBuilder) Dialect(d Dialect) *UpdateBuilder {
 
 func (u *UpdateBuilder) Set(column string, value interface{}) *UpdateBuilder {
 	u.ctx.Value = append(u.ctx.Value, updateValue{Column: column, Value: value})
+	return u
+}
+
+// Returning adds a RETURNING clause (Postgres / SQLite syntax).
+func (u *UpdateBuilder) Returning(columns ...string) *UpdateBuilder {
+	u.ctx.Returning = append(u.ctx.Returning, columns...)
 	return u
 }
 
@@ -77,6 +84,10 @@ func (u *UpdateBuilder) build() (res string, params []interface{}, err error) {
 
 		result = append(result, r...)
 		params = append(params, p...)
+	}
+
+	if len(u.ctx.Returning) != 0 {
+		result = append(result, "RETURNING "+strings.Join(u.ctx.Returning, ", "))
 	}
 
 	return strings.Join(result, " "), params, nil
