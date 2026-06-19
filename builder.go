@@ -90,17 +90,17 @@ func (b *Builder) Offset(offset int) *Builder {
 }
 
 func (b *Builder) Get() (query string, params []interface{}, err error) {
-	query, params, err = b.build()
+	query, params, err = b.build(true)
 	return b.withFields(b.withLimitOffset(query)), params, err
 }
 
 func (b *Builder) GetCount() (query string, params []interface{}, err error) {
-	query, params, err = b.build()
+	query, params, err = b.build(false)
 	return b.withCount(query, ""), params, err
 }
 
 func (b *Builder) GetCountWithKey(key string) (query string, params []interface{}, err error) {
-	query, params, err = b.build()
+	query, params, err = b.build(false)
 	return b.withCount(query, key), params, err
 }
 
@@ -150,7 +150,7 @@ func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, 
 				result = append(result, fmt.Sprintf(
 					"%s IN (%s)",
 					w.Key,
-					strings.Join(strings.Split(strings.Repeat("?", len(w.Values)), ""), ","),
+					placeholders(len(w.Values), ","),
 				))
 			} else {
 				result = append(result, fmt.Sprintf("%s %s ?", w.Key, w.Operator))
@@ -177,6 +177,14 @@ func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, 
 		result = append(result, ")")
 	}
 	return
+}
+
+// placeholders returns n "?" joined by sep, e.g. placeholders(3, ",") == "?,?,?".
+func placeholders(n int, sep string) string {
+	if n <= 0 {
+		return ""
+	}
+	return strings.TrimSuffix(strings.Repeat("?"+sep, n), sep)
 }
 
 func (b *Builder) withFields(query string) string {
@@ -207,7 +215,7 @@ func (b *Builder) withLimitOffset(query string) string {
 	return query
 }
 
-func (b *Builder) build() (res string, params []interface{}, err error) {
+func (b *Builder) build(withOrderBy bool) (res string, params []interface{}, err error) {
 	var result []string
 
 	if len(b.ctx.Table) == 0 {
@@ -258,7 +266,7 @@ func (b *Builder) build() (res string, params []interface{}, err error) {
 		result = append(result, fmt.Sprintf("GROUP BY %s", strings.Join(b.ctx.GroupBy, ", ")))
 	}
 
-	if len(b.ctx.OrderBy) != 0 {
+	if withOrderBy && len(b.ctx.OrderBy) != 0 {
 		result = append(result, "ORDER BY")
 
 		var ol []string
