@@ -37,6 +37,21 @@ The builder emits `?` placeholders internally; the dialect rewrites them on rend
 
 Implement `melody.Dialect` to add your own.
 
+### Set the dialect once
+
+Instead of repeating `.Dialect()` on every query, configure it once with a
+factory and keep it around (e.g. a package var):
+
+```go
+m := melody.With(melody.Postgres)
+
+m.New("users").Where("id", "=", 1).Get()       // SELECT ... WHERE id = $1
+m.NewInsert("users").Set("name", "bob").Get()  // INSERT ... VALUES( $1 )
+```
+
+The package-level `New`/`NewInsert`/… still work, and a factory builder can
+still override per query with a further `.Dialect()`.
+
 ## SELECT
 
 ```go
