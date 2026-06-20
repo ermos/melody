@@ -21,6 +21,8 @@ type updateContext struct {
 type updateValue struct {
 	Column string
 	Value  any
+	Raw    string // when set, RHS is this expression; Args are its bound params
+	Args   []any
 }
 
 func NewUpdate(table string) *UpdateBuilder {
@@ -39,6 +41,13 @@ func (u *UpdateBuilder) Dialect(d Dialect) *UpdateBuilder {
 
 func (u *UpdateBuilder) Set(column string, value any) *UpdateBuilder {
 	u.ctx.Value = append(u.ctx.Value, updateValue{Column: column, Value: value})
+	return u
+}
+
+// SetRaw sets a column to a raw expression instead of a bound value, e.g.
+// SetRaw("views", "views + 1") or SetRaw("name", "COALESCE(?, name)", newName).
+func (u *UpdateBuilder) SetRaw(column, expr string, args ...any) *UpdateBuilder {
+	u.ctx.Value = append(u.ctx.Value, updateValue{Column: column, Raw: expr, Args: args})
 	return u
 }
 
@@ -67,8 +76,13 @@ func (u *UpdateBuilder) build() (res string, params []any, err error) {
 
 	var resultValue []string
 	for _, v := range u.ctx.Value {
-		resultValue = append(resultValue, fmt.Sprintf("%s = ?", v.Column))
-		params = append(params, v.Value)
+		if v.Raw != "" {
+			resultValue = append(resultValue, fmt.Sprintf("%s = %s", v.Column, v.Raw))
+			params = append(params, v.Args...)
+		} else {
+			resultValue = append(resultValue, fmt.Sprintf("%s = ?", v.Column))
+			params = append(params, v.Value)
+		}
 	}
 
 	result = append(result, strings.Join(resultValue, ", "))

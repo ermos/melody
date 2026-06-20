@@ -17,6 +17,7 @@ type insertContext struct {
 	Rows           [][]any
 	DupKeys        []string // columns to overwrite on conflict
 	ConflictTarget []string // unique columns the conflict is detected on (Postgres)
+	DoNothing      bool     // emit ON CONFLICT DO NOTHING instead of an update
 	Returning      []string
 }
 
@@ -80,6 +81,14 @@ func (i *InsertBuilder) OnConflict(columns ...string) *InsertBuilder {
 	return i
 }
 
+// OnConflictDoNothing skips rows that violate a unique constraint
+// (Postgres/SQLite: ON CONFLICT DO NOTHING; default/MySQL: a no-op
+// ON DUPLICATE KEY UPDATE). Pair with OnConflict to target specific columns.
+func (i *InsertBuilder) OnConflictDoNothing() *InsertBuilder {
+	i.ctx.DoNothing = true
+	return i
+}
+
 func (i *InsertBuilder) dia() Dialect {
 	if i.dialect == nil {
 		return Default
@@ -127,7 +136,13 @@ func (i *InsertBuilder) build() (res string, params []any, err error) {
 		result = append(result, "VALUES "+strings.Join(rows, ", "))
 	}
 
-	if len(i.ctx.DupKeys) > 0 {
+	if i.ctx.DoNothing {
+		d, ok := i.dia().(doNothingDialect)
+		if !ok {
+			return res, params, errors.New("dialect does not support ON CONFLICT DO NOTHING")
+		}
+		result = append(result, d.ConflictDoNothing(i.ctx.ConflictTarget, i.ctx.Columns))
+	} else if len(i.ctx.DupKeys) > 0 {
 		clause, withParams := i.dia().UpsertClause(i.ctx.ConflictTarget, i.ctx.DupKeys)
 		result = append(result, clause)
 		if withParams {

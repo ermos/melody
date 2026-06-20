@@ -26,6 +26,34 @@ func (u *UpdateBuilder) OrWhere(key string, operator string, values ...any) *Upd
 	return u.where(key, operator, values, true, false)
 }
 
+func (u *UpdateBuilder) WhereRaw(expr string, args ...any) *UpdateBuilder {
+	return u.raw(expr, false, args)
+}
+
+func (u *UpdateBuilder) OrWhereRaw(expr string, args ...any) *UpdateBuilder {
+	return u.raw(expr, true, args)
+}
+
+func (u *UpdateBuilder) WhereNull(key string) *UpdateBuilder {
+	return u.raw(key+" IS NULL", false, nil)
+}
+func (u *UpdateBuilder) OrWhereNull(key string) *UpdateBuilder {
+	return u.raw(key+" IS NULL", true, nil)
+}
+func (u *UpdateBuilder) WhereNotNull(key string) *UpdateBuilder {
+	return u.raw(key+" IS NOT NULL", false, nil)
+}
+func (u *UpdateBuilder) OrWhereNotNull(key string) *UpdateBuilder {
+	return u.raw(key+" IS NOT NULL", true, nil)
+}
+
+func (u *UpdateBuilder) raw(expr string, isOr bool, args []any) *UpdateBuilder {
+	u.ctx.Where = append(u.ctx.Where, WhereContext{
+		Values: []where{{Raw: expr, Values: args, IsOr: isOr}},
+	})
+	return u
+}
+
 func (u *UpdateBuilder) On(firstKey string, operator string, secondKey string) *UpdateBuilder {
 	return u.where(firstKey, operator, []any{secondKey}, false, true)
 }

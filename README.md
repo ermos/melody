@@ -77,6 +77,22 @@ melody.New("users").
 // ... WHERE status IN (?,?) OR ( age > ? AND vip = ? )
 ```
 
+### IS NULL / raw predicates
+
+```go
+melody.New("users").
+    WhereNull("deleted_at").                         // ... WHERE deleted_at IS NULL
+    WhereNotNull("email").                           // AND email IS NOT NULL
+    WhereRaw("LOWER(name) LIKE LOWER(?)", "%bob%").  // AND LOWER(name) LIKE LOWER(?)
+    WhereRaw("EXISTS (SELECT 1 FROM orders o WHERE o.user_id = users.id)").
+    OrderByRaw("RANDOM()").
+    Get()
+```
+
+`WhereRaw` (and `OrWhereRaw`) is the escape hatch for anything the typed API
+can't express — function calls, `EXISTS`/`NOT EXISTS`, custom `IN`, etc. Its `?`
+args are bound like any other value.
+
 ### JOIN
 
 ```go
@@ -116,6 +132,13 @@ melody.NewUpdate("users").
     Get()
 // UPDATE users SET name = ? WHERE id = ?
 
+melody.NewUpdate("posts").
+    SetRaw("views", "views + 1").              // column-relative / expression
+    SetRaw("name", "COALESCE(?, name)", "x").  // with bound args
+    Where("id", "=", 1).
+    Get()
+// UPDATE posts SET views = views + 1, name = COALESCE(?, name) WHERE id = ?
+
 melody.NewDelete("users").
     Where("id", "=", 1).
     Get()
@@ -136,6 +159,16 @@ melody.NewInsert("users").Dialect(melody.Postgres).
 //   ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
 
 // default dialect: ... ON DUPLICATE KEY UPDATE name = ?
+```
+
+Skip conflicting rows instead of updating:
+
+```go
+melody.NewInsert("users").Dialect(melody.Postgres).
+    Set("id", 1).Set("name", "bob").
+    OnConflict("id").OnConflictDoNothing().
+    Get()
+// INSERT INTO users (id, name) VALUES( $1, $2 ) ON CONFLICT (id) DO NOTHING
 ```
 
 ## HTTP query params → WHERE

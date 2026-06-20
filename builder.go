@@ -39,6 +39,7 @@ type where struct {
 	Values   []any
 	IsOn     bool
 	IsOr     bool
+	Raw      string // when set, emitted verbatim; Values are its bound args
 }
 
 type orderBy struct {
@@ -91,6 +92,12 @@ func (b *Builder) OrderBy(field, direction string) *Builder {
 		Key:       field,
 		Direction: direction,
 	})
+	return b
+}
+
+// OrderByRaw appends a raw ORDER BY expression, e.g. OrderByRaw("RANDOM()").
+func (b *Builder) OrderByRaw(expr string) *Builder {
+	b.ctx.OrderBy = append(b.ctx.OrderBy, orderBy{Key: expr})
 	return b
 }
 
@@ -154,23 +161,24 @@ func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, 
 			}
 		}
 
-		if len(w.Values) != 1 && w.Operator != "IN" {
-			return result, params, fmt.Errorf("%s cannot contains multiple value if operator isn't IN", w.Key)
-		}
-
-		if w.IsOn {
+		switch {
+		case w.Raw != "":
+			result = append(result, w.Raw)
+			params = append(params, w.Values...)
+		case w.IsOn:
 			result = append(result, fmt.Sprintf("%s %s %s", w.Key, w.Operator, w.Values[0].(string)))
-		} else {
-			if w.Operator == "IN" {
-				result = append(result, fmt.Sprintf(
-					"%s IN (%s)",
-					w.Key,
-					placeholders(len(w.Values), ","),
-				))
-			} else {
-				result = append(result, fmt.Sprintf("%s %s ?", w.Key, w.Operator))
+		case w.Operator == "IN":
+			result = append(result, fmt.Sprintf(
+				"%s IN (%s)",
+				w.Key,
+				placeholders(len(w.Values), ","),
+			))
+			params = append(params, w.Values...)
+		default:
+			if len(w.Values) != 1 {
+				return result, params, fmt.Errorf("%s cannot contains multiple value if operator isn't IN", w.Key)
 			}
-
+			result = append(result, fmt.Sprintf("%s %s ?", w.Key, w.Operator))
 			params = append(params, w.Values...)
 		}
 	}
@@ -286,7 +294,11 @@ func (b *Builder) build(withOrderBy bool) (res string, params []any, err error) 
 
 		var ol []string
 		for _, o := range b.ctx.OrderBy {
-			ol = append(ol, fmt.Sprintf("%s %s", o.Key, o.Direction))
+			if o.Direction == "" {
+				ol = append(ol, o.Key) // raw expression, e.g. RANDOM()
+			} else {
+				ol = append(ol, fmt.Sprintf("%s %s", o.Key, o.Direction))
+			}
 		}
 
 		result = append(result, strings.Join(ol, ", "))
