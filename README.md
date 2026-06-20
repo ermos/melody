@@ -3,13 +3,13 @@
 🎶 Build your SQL queries like a melody — a small, dialect-agnostic query builder for Go.
 
 ```bash
-go get github.com/ermos/melody
+go get github.com/ermos/melody/v2
 ```
 
 ## Quick start
 
 ```go
-import "github.com/ermos/melody"
+import "github.com/ermos/melody/v2" // imported as package "melody"
 
 q, params, err := melody.New("users").
     Dialect(melody.Postgres).
