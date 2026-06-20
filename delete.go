@@ -45,6 +45,34 @@ func (d *DeleteBuilder) OrWhere(key string, operator string, values ...any) *Del
 	return d.where(key, operator, values, true, false)
 }
 
+func (d *DeleteBuilder) WhereRaw(expr string, args ...any) *DeleteBuilder {
+	return d.raw(expr, false, args)
+}
+
+func (d *DeleteBuilder) OrWhereRaw(expr string, args ...any) *DeleteBuilder {
+	return d.raw(expr, true, args)
+}
+
+func (d *DeleteBuilder) WhereNull(key string) *DeleteBuilder {
+	return d.raw(key+" IS NULL", false, nil)
+}
+func (d *DeleteBuilder) OrWhereNull(key string) *DeleteBuilder {
+	return d.raw(key+" IS NULL", true, nil)
+}
+func (d *DeleteBuilder) WhereNotNull(key string) *DeleteBuilder {
+	return d.raw(key+" IS NOT NULL", false, nil)
+}
+func (d *DeleteBuilder) OrWhereNotNull(key string) *DeleteBuilder {
+	return d.raw(key+" IS NOT NULL", true, nil)
+}
+
+func (d *DeleteBuilder) raw(expr string, isOr bool, args []any) *DeleteBuilder {
+	d.ctx.Where = append(d.ctx.Where, WhereContext{
+		Values: []where{{Raw: expr, Values: args, IsOr: isOr}},
+	})
+	return d
+}
+
 func (d *DeleteBuilder) GroupWhere(sub SubBuilderFunc) *DeleteBuilder {
 	return d.sub(sub, false)
 }

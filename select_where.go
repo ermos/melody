@@ -26,6 +26,31 @@ func (b *Builder) OrWhere(key string, operator string, values ...any) *Builder {
 	return b.where(key, operator, values, true, false)
 }
 
+// WhereRaw adds a raw boolean predicate, e.g.
+// WhereRaw("LOWER(name) LIKE LOWER(?)", "%bob%") or
+// WhereRaw("EXISTS (SELECT 1 FROM orders WHERE orders.user_id = users.id)").
+func (b *Builder) WhereRaw(expr string, args ...any) *Builder {
+	return b.raw(expr, false, args)
+}
+
+func (b *Builder) OrWhereRaw(expr string, args ...any) *Builder {
+	return b.raw(expr, true, args)
+}
+
+func (b *Builder) WhereNull(key string) *Builder    { return b.raw(key+" IS NULL", false, nil) }
+func (b *Builder) OrWhereNull(key string) *Builder  { return b.raw(key+" IS NULL", true, nil) }
+func (b *Builder) WhereNotNull(key string) *Builder { return b.raw(key+" IS NOT NULL", false, nil) }
+func (b *Builder) OrWhereNotNull(key string) *Builder {
+	return b.raw(key+" IS NOT NULL", true, nil)
+}
+
+func (b *Builder) raw(expr string, isOr bool, args []any) *Builder {
+	b.ctx.Where = append(b.ctx.Where, WhereContext{
+		Values: []where{{Raw: expr, Values: args, IsOr: isOr}},
+	})
+	return b
+}
+
 func (b *Builder) On(firstKey string, operator string, secondKey string) *Builder {
 	return b.where(firstKey, operator, []any{secondKey}, false, true)
 }

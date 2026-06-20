@@ -35,6 +35,13 @@ var Postgres Dialect = postgresDialect{}
 // ON CONFLICT ... DO UPDATE SET upsert (not MySQL's ON DUPLICATE KEY).
 var SQLite Dialect = sqliteDialect{}
 
+// doNothingDialect is an optional capability: a dialect that can render an
+// "insert, skip on conflict" clause. Detected via type assertion so the public
+// Dialect interface stays unchanged (custom dialects need not implement it).
+type doNothingDialect interface {
+	ConflictDoNothing(conflict, columns []string) string
+}
+
 type defaultDialect struct{}
 
 func (defaultDialect) Rebind(query string) string { return query }
@@ -45,6 +52,15 @@ func (defaultDialect) UpsertClause(_, update []string) (string, bool) {
 		sets[i] = c + " = ?"
 	}
 	return "ON DUPLICATE KEY UPDATE " + strings.Join(sets, ", "), true
+}
+
+// ConflictDoNothing: MySQL has no DO NOTHING, so emit a no-op self-assignment.
+func (defaultDialect) ConflictDoNothing(_, columns []string) string {
+	if len(columns) == 0 {
+		return "ON DUPLICATE KEY UPDATE"
+	}
+	c := columns[0]
+	return "ON DUPLICATE KEY UPDATE " + c + " = " + c
 }
 
 type postgresDialect struct{}
@@ -69,12 +85,28 @@ func (postgresDialect) UpsertClause(conflict, update []string) (string, bool) {
 	return onConflictClause(conflict, update)
 }
 
+func (postgresDialect) ConflictDoNothing(conflict, _ []string) string {
+	return doNothingClause(conflict)
+}
+
 type sqliteDialect struct{}
 
 func (sqliteDialect) Rebind(query string) string { return query }
 
 func (sqliteDialect) UpsertClause(conflict, update []string) (string, bool) {
 	return onConflictClause(conflict, update)
+}
+
+func (sqliteDialect) ConflictDoNothing(conflict, _ []string) string {
+	return doNothingClause(conflict)
+}
+
+func doNothingClause(conflict []string) string {
+	target := ""
+	if len(conflict) > 0 {
+		target = " (" + strings.Join(conflict, ", ") + ")"
+	}
+	return "ON CONFLICT" + target + " DO NOTHING"
 }
 
 // onConflictClause renders the Postgres/SQLite upsert clause. It needs no extra

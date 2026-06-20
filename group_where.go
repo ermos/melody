@@ -26,6 +26,28 @@ func (b *WhereContext) OrWhere(key string, operator string, values ...any) *Wher
 	return b.where(key, operator, values, true, false)
 }
 
+func (b *WhereContext) WhereRaw(expr string, args ...any) *WhereContext {
+	return b.raw(expr, false, args)
+}
+
+func (b *WhereContext) OrWhereRaw(expr string, args ...any) *WhereContext {
+	return b.raw(expr, true, args)
+}
+
+func (b *WhereContext) WhereNull(key string) *WhereContext   { return b.raw(key+" IS NULL", false, nil) }
+func (b *WhereContext) OrWhereNull(key string) *WhereContext { return b.raw(key+" IS NULL", true, nil) }
+func (b *WhereContext) WhereNotNull(key string) *WhereContext {
+	return b.raw(key+" IS NOT NULL", false, nil)
+}
+func (b *WhereContext) OrWhereNotNull(key string) *WhereContext {
+	return b.raw(key+" IS NOT NULL", true, nil)
+}
+
+func (b *WhereContext) raw(expr string, isOr bool, args []any) *WhereContext {
+	b.Values = append(b.Values, where{Raw: expr, Values: args, IsOr: isOr})
+	return b
+}
+
 func (b *WhereContext) On(firstKey string, operator string, secondKey string) *WhereContext {
 	return b.where(firstKey, operator, []any{secondKey}, false, true)
 }
