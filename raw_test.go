@@ -80,3 +80,16 @@ func TestDefaultDoNothingMySQL(t *testing.T) {
 	eq(t, "mysql do nothing", q, p, err,
 		"INSERT INTO users (id, name) VALUES( ?, ? ) ON DUPLICATE KEY UPDATE id = id", []any{1, "bob"})
 }
+
+func TestWhereNotIn(t *testing.T) {
+	q, p, err := New("users").Where("status", "NOT IN", "banned", "deleted").Get()
+	eq(t, "not in", q, p, err,
+		"SELECT * FROM users WHERE status NOT IN (?,?)", []any{"banned", "deleted"})
+}
+
+func TestWhereNotInPostgres(t *testing.T) {
+	q, p, err := New("users").Dialect(Postgres).
+		Where("id", "NOT IN", 1, 2, 3).Get()
+	eq(t, "not in pg", q, p, err,
+		"SELECT * FROM users WHERE id NOT IN ($1,$2,$3)", []any{1, 2, 3})
+}

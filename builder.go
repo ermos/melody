@@ -167,16 +167,17 @@ func buildWhere(wc WhereContext, isFirst, isJoin, isSub bool) (result []string, 
 			params = append(params, w.Values...)
 		case w.IsOn:
 			result = append(result, fmt.Sprintf("%s %s %s", w.Key, w.Operator, w.Values[0].(string)))
-		case w.Operator == "IN":
+		case w.Operator == "IN" || w.Operator == "NOT IN":
 			result = append(result, fmt.Sprintf(
-				"%s IN (%s)",
+				"%s %s (%s)",
 				w.Key,
+				w.Operator,
 				placeholders(len(w.Values), ","),
 			))
 			params = append(params, w.Values...)
 		default:
 			if len(w.Values) != 1 {
-				return result, params, fmt.Errorf("%s cannot contains multiple value if operator isn't IN", w.Key)
+				return result, params, fmt.Errorf("%s cannot contain multiple values unless operator is IN or NOT IN", w.Key)
 			}
 			result = append(result, fmt.Sprintf("%s %s ?", w.Key, w.Operator))
 			params = append(params, w.Values...)
